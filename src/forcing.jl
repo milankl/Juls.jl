@@ -147,7 +147,7 @@ function Seamount(::Type{T},P::Parameter,G::Grid) where {T<:AbstractFloat}
     bumpx = exp.(-((xx_T .- Lx/2).^2)/(2*topo_width^2))
     bumpy = exp.(-((yy_T .- Ly/2).^2)/(2*topo_width^2))
 
-    return T.(H .- topo_height*bumpx.*bumpy)
+    return T.(P.scale_η*(H .- topo_height*bumpx.*bumpy))
 end
 
 """Returns a matrix of water depth for the whole domain that contains a
@@ -162,8 +162,8 @@ function Ridge(::Type{T},P::Parameter,G::Grid) where {T<:AbstractFloat}
     bumpx = exp.(-((xx_T .- Lx/2).^2)/(2*topo_width^2))
     bumpy = exp.(-((yy_T .- Ly/2).^2)/(2*topo_width^2))
 
-    Hx = H .- topo_height*bumpx
-    Hy = H .- topo_height*bumpy
+    Hx = P.scale_η*(H .- topo_height*bumpx)
+    Hy = P.scale_η*(H .- topo_height*bumpy)
     return T.(Hx),T.(Hy)
 end
 
@@ -184,14 +184,14 @@ function Ridges(::Type{T},P::Parameter,G::Grid) where {T<:AbstractFloat}
         R .-= topo_height*exp.(-((xx_T .- topo_ridges_positions[i]*Lx).^2)/(2*topo_width^2))
     end
 
-    return T.(R)
+    return T.(P.scale_η*R)
 end
 
 """Returns a matrix of constant water depth H."""
 function FlatBottom(::Type{T},P::Parameter,G::Grid) where {T<:AbstractFloat}
     @unpack nx,ny,haloη = G
     @unpack H = P
-    return fill(T(H),(nx+2*haloη,ny+2*haloη))
+    return fill(T(P.scale_η*H),(nx+2*haloη,ny+2*haloη))
 end
 
 """Returns Kelvin wave pumping forcing of the continuity equation."""
@@ -201,12 +201,12 @@ function KelvinPump(::Type{T},P::Parameter,G::Grid) where {T<:AbstractFloat}
     @unpack R,ϕ,Δ = G
     @unpack A,ϕk,wk = P
 
-    xx_T,yy_T = meshgrid(x_T,y_T)
+    _,yy_T = meshgrid(x_T,y_T)
 
     mϕ = 2π*R/360.          # meters per degree latitude
     y0 = Ly/2 - (ϕ-ϕk)*mϕ   # y[m] for central latitude of pumping
 
-    Fη = A*Δ*exp.(-(yy_T.-y0).^2/(2*wk^2))
+    Fη = P.scale_η*A*Δ*exp.(-(yy_T.-y0).^2/(2*wk^2))
 
     return T.(Fη)
 end

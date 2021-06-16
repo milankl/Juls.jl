@@ -90,7 +90,7 @@ function output_nc!(i::Int,
 
         @unpack halo,haloη,halosstx,halossty = S.grid
         @unpack f_q,ep,dtint = S.grid
-        @unpack scale,scale_inv,scale_sst = S.constants
+        @unpack scale_η,scale_inv,scale_sst = S.constants
 
         # CUT OFF HALOS
         # As output is before copyto!(u,u0), take u0,v0,η0
@@ -105,7 +105,7 @@ function output_nc!(i::Int,
             NetCDF.putvar(ncs.v,"v",v,start=[1,1,iout],count=[-1,-1,1])
         end
         if ncs.η != nothing
-            @views η = Float32.(Diag.RungeKutta.η0[haloη+1:end-haloη,haloη+1:end-haloη])
+            @views η = Float32.(Diag.RungeKutta.η0[haloη+1:end-haloη,haloη+1:end-haloη]/scale_η)
             NetCDF.putvar(ncs.η,"eta",η,start=[1,1,iout],count=[-1,-1,1])
         end
         if ncs.sst != nothing
@@ -134,7 +134,7 @@ function output_nc!(i::Int,
         end
         if ncs.dη != nothing
             @views η = Float32.(Diag.RungeKutta.η0[haloη+1:end-haloη,haloη+1:end-haloη])
-            @views dη = η-Float32.(Prog.η[haloη+1:end-haloη,haloη+1:end-haloη])
+            @views dη = (η-Float32.(Prog.η[haloη+1:end-haloη,haloη+1:end-haloη]))/scale_η
             NetCDF.putvar(ncs.dη,"deta",dη,start=[1,1,iout],count=[-1,-1,1])
         end
 

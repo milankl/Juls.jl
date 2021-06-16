@@ -41,6 +41,7 @@ struct Constants{T<:AbstractFloat,Tprog<:AbstractFloat}
 
     # PHYSICAL CONSTANTS
     g::T                    # gravity
+    g_scaled::T             # gravity scaled by scale/scale_η
     cD::T                   # quadratic bottom friction - incl grid spacing
     rD::T                   # linear bottom friction - incl grid spacing
     γ::T                    # frequency of interface relaxation
@@ -53,7 +54,8 @@ struct Constants{T<:AbstractFloat,Tprog<:AbstractFloat}
     ωFy::Float64            # frequency [1/2] of seasonal wind y incl 2π
 
     # SCALING
-    scale::T                # multiplicative constant for low-precision arithmetics
+    scale::T                # multiplicative constant for low-precision arithmetics used for u,v
+    scale_η::T              # multiplicative constant for η
     scale_inv::T            # and its inverse
     scale_sst::T            # scale for sst
 end
@@ -88,6 +90,7 @@ function Constants{T,Tprog}(P::Parameter,G::Grid) where {T<:AbstractFloat,Tprog<
     # BOUNDARY CONDITIONS AND PHYSICS
     one_minus_α = convert(Tprog,1-P.α)      # for the ghost point copy/tangential boundary conditions
     g = convert(T,P.g)                      # gravity - for Bernoulli potential
+    g_scaled = convert(T,P.g*P.scale/P.scale_η)
 
     # BOTTOM FRICTION COEFFICIENTS
     # incl grid spacing Δ for non-dimensional gradients
@@ -101,8 +104,12 @@ function Constants{T,Tprog}(P::Parameter,G::Grid) where {T<:AbstractFloat,Tprog<
 
     # BIHARMONIC DIFFUSION
     # undo scaling here as smagorinksy diffusion contains scale^2 due to ~u^2
-    cSmag = convert(T,-P.cSmag/P.scale)   # Smagorinsky coefficient
-    νB = convert(T,-P.νB/30000)           # linear scaling based on 540m^s/s at Δ=30km
+    cSmag = convert(T,-P.cSmag/P.scale)             # Smagorinsky coefficient
+
+    # νB ~ Δ²νA, biharmonic νB is scaled with Δ² from harmonic νA
+    # νA ~ (Δ²/(30km)^2)*νA0, i.e. νA is scaled with Δ² relative to νA0=500 at 30km.
+    # dimensionless operators: scaled νB* = Δ⁻³νB
+    νB = convert(T,-P.νA0*(G.Δ/30000^2))             # Δ² scaling based on 500m^s/s at Δ=30km
 
     # TRACER ADVECTION
     τSST = convert(T,G.dtadvint/(P.τSST*3600*24))   # tracer restoring [1]
@@ -119,12 +126,13 @@ function Constants{T,Tprog}(P::Parameter,G::Grid) where {T<:AbstractFloat,Tprog<
 
     # SCALING
     scale = convert(T,P.scale)
+    scale_η = convert(T,P.scale_η)
     scale_inv = convert(T,1/P.scale)
     scale_sst = convert(T,P.scale_sst)
 
     return Constants{T,Tprog}(  RKaΔt,RKbΔt,Δt_Δs,Δt_Δ,Δt_Δ_half,
                                 SSPRK3c,one_minus_α,
-                                g,cD,rD,γ,cSmag,νB,τSST,jSST,
+                                g,g_scaled,cD,rD,γ,cSmag,νB,τSST,jSST,
                                 ωFη,ωFx,ωFy,
-                                scale,scale_inv,scale_sst)
+                                scale,scale_η,scale_inv,scale_sst)
 end

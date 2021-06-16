@@ -40,9 +40,8 @@ function rhs_nonlinear!(u::AbstractMatrix,
     
     # Bernoulli potential - recalculate for new η, KEu,KEv are only updated in advection_coriolis
     @unpack p,KEu,KEv,dpdx,dpdy = Diag.Bernoulli
-    @unpack g,scale,scale_inv = S.constants
-    g_scale = g*scale
-    bernoulli!(p,KEu,KEv,η,g_scale,ep,scale_inv)
+    @unpack g_scaled,scale_inv = S.constants
+    bernoulli!(p,KEu,KEv,η,g_scaled,ep,scale_inv)
     ∂x!(dpdx,p)
     ∂y!(dpdy,p)
 
@@ -65,12 +64,12 @@ function rhs_linear!(   u::AbstractMatrix,
                         t::Int)
 
     @unpack h,h_u,h_v,U,V,dUdx,dVdy = Diag.VolumeFluxes
-    @unpack g,scale = S.constants
+    @unpack g,scale,scale_η = S.constants
     @unpack ep = S.grid
 
     # Pressure gradient
     @unpack dpdx,dpdy = Diag.Bernoulli
-    g_scale = g*scale
+    g_scale = g*scale/scale_η
     ∂x!(dpdx,g_scale*η)
     ∂y!(dpdy,g_scale*η)
 
@@ -97,7 +96,6 @@ function advection_coriolis!(   u::Array{T,2},
     @unpack h = Diag.VolumeFluxes
     @unpack h_q,dvdx,dudy = Diag.Vorticity
     @unpack u²,v²,KEu,KEv = Diag.Bernoulli
-    @unpack ep,f_q = S.grid
 
     Ixy!(h_q,h)
 

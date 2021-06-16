@@ -1,6 +1,8 @@
 .DS_Store
 *.jld
+*.jld2
 *.nc
 nohup.out
 progress.txt
 parameter.txt
+.vscode
